@@ -259,7 +259,7 @@ Tuango %>%
   mutate(Percentage = n/sum(n)*100) %>%
   kable(digits = 2)
 ```
-#因为如果用rfm1的话效果没有改变，因此开始用前面题计算过的
+#Because if using RFM1, the effect does not change, therefore start using the previously calculated approach.
 Q12(use column calculated)
 ```{r}
 Tuango <- Tuango %>%
@@ -270,7 +270,7 @@ head(Tuango %>% select(rec_quin, freq_quin, mon_quin,rfmindex_iq))
 
 
 ```{r}
-#单独生成RFM cell对应的response rate
+#Generate response rate specifically for each RFM cell.
 avg_resp_rate_rfm  <- Tuango %>%
   group_by(rfmindex_iq) %>%
   summarise(resp_rate_rfm_iq = mean(buyer), .groups = "drop")
