@@ -1,0 +1,177 @@
+---
+title: "logistic"
+author: "Philip Lin"
+date: "2024-02-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+BBB = read.csv('/Users/linpengyu/Desktop/BBB.csv')
+```
+
+#Part I: Logistic Regression (10 points)
+
+#Estimate a logistic regression model using “buyer” as the dependent variable and the following as predictor variables:
+
+```{r}
+#female = 1, male = 0
+BBB$gender = ifelse(BBB$gender == 'F', 1, 0)
+BBB_logit = glm(buyer~ last+ total+ gender+ child+ youth+ cook+ do_it+ refernce+ art+ geog, 
+                family = "binomial", data=BBB)
+
+summary(BBB_logit)
+```
+
+```{r}
+exp(BBB_logit$coefficients)
+```
+```{r}
+library(margins)
+
+margins(BBB_logit)
+```
+
+#scale total
+```{r}
+library(dplyr)
+BBB = BBB %>%
+  mutate(total_scaled = total/sd(BBB$total))
+
+BBB_logit2 = glm(buyer~ last+ total_scaled+ gender+ child+ youth+ cook+ do_it+ refernce+ art+ geog, 
+                family = "binomial", data=BBB)
+
+summary(BBB_logit2)
+```
+
+```{r}
+margins(BBB_logit2)
+
+```
+
+#scaled_exp()
+```{r}
+exp(BBB_logit2$coefficients)
+```
+
+#2.Summarize and interpret the results (so that a marketing manager can understand them).  Which variables are statistically significant?  Which seem to be “managerially important”?  Interpret the average marginal effect for each of the predictors.
+
+```{r}
+#Statistically Significant Variables:
+
+#All the variables shown in the output are statistically significant, which is indicated by the p-values being less than 0.05 (typically the threshold for statistical significance).
+
+#Managerially Important Variables:
+#For example, art and geog have the largest coefficients, indicating that these are very influential in predicting whether someone is a buyer.
+
+#Average Marginal Effects:
+
+#For total_scaled, the marginal effect is approximately 0.0075, meaning for each sd increase in the scaled total purchases, the probability of being a buyer increases by 0.75%.
+#For gender, a change from male (0) to female (1) decreases the probability of being a buyer by approximately 5.15%.
+#Negative coefficients like those for last, child, youth, and cook indicate that higher values of these variables are associated with a decrease in the probability of being a buyer.
+
+#exp() stands for odd ratio
+```
+
+Part II: Decile Analysis of Logistic Regression Results (10 points)
+
+1.Predict each customer’s probability of purchase based on the logistic regression above. Assign each customer to a decile based on his or her predicted probability of purchase.
+```{r}
+BBB$purch_prob = predict.glm(BBB_logit2, BBB, type = 'response')
+
+```
+
+```{r}
+BBB$purch_quin = ntile(BBB$purch_prob, 10)
+```
+
+2.Create a bar chart plotting response rate by probability decile (as just defined above). 
+Hint: The “response rate” is NOT the same as the "predicted probability of purchase." Instead, it is the percentage of customers in a given group (for example a decile) that have actually bought "The Art History of Florence."
+```{r}
+
+#BBB %>% group_by(purch_quin) %>% summarise(avg_purch = mean(buyer), .groups = "drop")
+BBB$purch_quin <- max(BBB$purch_quin) + 1 - BBB$purch_quin
+
+
+#avg_resp_rate_rec
+avg_resp_rate_purch <- BBB %>% 
+  group_by(purch_quin) %>%
+  summarise(avg_resp_rate = mean(buyer), .groups = 'drop')
+avg_resp_rate_purch
+
+#barplot
+library(ggplot2)
+bar_avg_resp_rate_purch <-
+  ggplot(data = avg_resp_rate_purch,
+         aes(x = purch_quin, y = avg_resp_rate)) +
+  labs(x = "Purch Quintile", y = "Average Respose Rate") +
+  geom_bar(stat = 'identity', width = 0.6)
+
+bar_avg_resp_rate_purch
+```
+
+3.Generate a report showing number of customers, the number of buyers of “The Art History of Florence’ and the response rate to the offer by probability decile for the random sample (i.e. the 50,000) customers in the dataset.
+```{r}
+BBB_summary  <- BBB %>%
+  group_by(purch_quin) %>%
+  summarise(n = n(),
+            buyer_count = sum(buyer),
+            avg_resp_rate = mean(buyer))
+
+BBB_summary
+```
+
+4.For the 50,000 customers in the dataset run a logistic regression model where you predict response only based on the “child” variable. Why is the coefficient for “child” different than that in the logistic regression in Part I? Please be specific and investigate beyond simply stating the statistical problem. 
+
+```{r}
+BBB_child = glm(buyer~ child, family = 'binomial', data = BBB)
+summary(BBB_child)
+```
+
+#3
+```{r}
+gains_table <- data.frame(
+  cum_perc_customers = c(0, seq(10, 100, by=10)), # Adding 0% to the start
+  cum_gain = c(0, 42.8, 61.3, 72.6, 80.7, 87.0, 91.3, 94.4, 97.1, 99.1, 100.0) 
+)
+
+# Calculate the 'no model' line, which is the 45-degree line
+no_model <- data.frame(
+  cum_perc_customers = c(0, seq(10, 100, by=10)), # Adding 0% to the start
+  no_model_gain = c(0, seq(10, 100, by=10)) # Adding 0% no model gain to the start
+)
+
+# Load the necessary library
+library(ggplot2)
+
+# Create the plot
+g <- ggplot(data=gains_table, aes(x=cum_perc_customers, y=cum_gain)) +
+  geom_line(aes(color="RFM Model"), size=1) +
+  geom_point(aes(color="RFM Model")) +
+  geom_line(data=no_model, aes(x=cum_perc_customers, y=no_model_gain, color="No Model"), linetype="dashed", size=1) +
+  scale_color_manual(values=c("RFM Model"="blue", "No Model"="magenta")) +
+  labs(title="CUMULATIVE GAINS CHARTS", x="% of Customers", y="Cum Gains") +
+  theme_minimal() +
+  theme(legend.title=element_blank(), legend.position="bottom") +
+  geom_segment(aes(x=0, y=0, xend=100, yend=100, color="No Model"), linetype="dashed") +
+  scale_x_continuous(breaks = seq(0, 100, by=10), limits = c(0, 100)) +
+  scale_y_continuous(breaks = seq(0, 100, by=10), limits = c(0, 100)) +
+  theme(legend.position="bottom", plot.title = element_text(hjust = 0.5))
+
+# Display the plot
+print(g)
+
+# Show the plot
+ggsave("cumulative_gains_chart.png", width=8, height=6) # Save the plot as a PNG file
+
+```
+
+
+
+
+
+
+
