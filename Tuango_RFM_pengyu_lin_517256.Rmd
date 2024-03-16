@@ -1,0 +1,343 @@
+---
+title: "CA_RMF"
+author: "Pengyu Lin"
+date: "2024-02-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+Tuango = read.csv('/Users/linpengyu/Desktop/Tuango_RFM.csv')
+#Tuango
+```
+
+Q1
+```{r}
+library(gmodels)
+CrossTable(Tuango$buyer)
+```
+#3.1% of customers responded after the push message.
+Q2
+```{r}
+# Assuming you have already read the CSV into a data frame named Tuango
+
+# Filter the data frame for buyers only
+buyers <- subset(Tuango, buyer == 1)
+
+# Calculate the average spending for buyers
+average_spending_buyers <- mean(buyers$ordersize)
+
+# Print the average spending
+print(average_spending_buyers)
+
+```
+#Of those who bought, what was the average spending was 202.3565 RMB.
+Q2_way2
+
+```{r}
+library(dplyr)
+
+Tuango %>%
+  filter(buyer == 1) %>%
+  summarise(average_spending = mean(ordersize))
+
+```
+Q3
+```{r}
+library(dplyr)
+
+# Assuming 'Tuango' is your dataframe
+Tuango <- Tuango %>%
+  mutate(
+    rec_quin = ntile(recency, 5),
+    freq_quin = ntile(frequency, 5),
+    mon_quin = ntile(monetary, 5)
+  )
+head(Tuango %>% select(userid, buyer,recency,frequency,monetary,rec_quin,freq_quin,mon_quin))
+```
+
+Q4avg_resp_rate_recency
+```{r}
+#avg_rec
+Tuango %>% group_by(rec_quin) %>% summarise(avg_rec = mean(recency), .groups = "drop")
+
+#avg_resp_rate_rec
+avg_resp_rate_rec <- Tuango %>% 
+  group_by(rec_quin) %>%
+  summarise(avg_resp_rate = mean(buyer), .groups = 'drop')
+avg_resp_rate_rec
+
+#barplot
+library(ggplot2)
+bar_avg_resp_rate_rec <-
+  ggplot(data = avg_resp_rate_rec,
+         aes(x = rec_quin, y = avg_resp_rate)) +
+  labs(x = "Receney Quintile", y = "Average Respose Rate") +
+  geom_bar(stat = 'identity', width = 0.5)
+
+bar_avg_resp_rate_rec
+```
+
+Q5avg_resp_rate_freq
+```{r}
+#avg_freq
+#Tuango %>% group_by(freq_quin) %>% summarise(avg_freq = mean(frequency), .groups = "drop")
+
+#Flip indices
+Tuango$freq_quin <- max(Tuango$freq_quin) + 1 - Tuango$freq_quin
+Tuango %>% group_by(freq_quin) %>% summarise(avg_freq = mean(frequency), .groups = "drop")
+
+
+#avg_resp_rate_freq
+avg_resp_rate_freq <- Tuango %>% 
+  group_by(freq_quin) %>%
+  summarise(avg_resp_rate = mean(buyer), .groups = 'drop')
+avg_resp_rate_freq
+
+#barplot
+bar_avg_resp_rate_freq <-
+  ggplot(data = avg_resp_rate_freq,
+         aes(x = freq_quin, y = avg_resp_rate)) +
+  labs(x = "Frequency Quintile", y = "Average Respose Rate") +
+  geom_bar(stat = 'identity', width = 0.5)
+
+bar_avg_resp_rate_freq
+```
+
+Q6avg_resp_rate_monetary
+```{r}
+#Flip indices
+Tuango$mon_quin <- max(Tuango$mon_quin) + 1 - Tuango$mon_quin
+Tuango %>% group_by(mon_quin) %>% summarise(avg_mon = mean(monetary), .groups = "drop")#just checkout whether flip, does not have relationship wit following calculation
+
+
+#avg_resp_rate_mon
+avg_resp_rate_mon <- Tuango %>% 
+  group_by(mon_quin) %>%
+  summarise(avg_resp_rate = mean(buyer), .groups = 'drop')
+avg_resp_rate_mon
+
+#barplot
+bar_avg_resp_rate_mon <-
+  ggplot(data = avg_resp_rate_mon,
+         aes(x = mon_quin, y = avg_resp_rate)) +
+  labs(x = "Monetary Quintile", y = "Average Respose Rate") +
+  geom_bar(stat = 'identity', width = 0.5)
+
+bar_avg_resp_rate_mon
+```
+
+Q7avg_spd_rec
+```{r}
+#avg_rec
+Tuango %>% group_by(rec_quin) %>% summarise(avg_rec = mean(recency), .groups = "drop")#just check whether flip
+
+# Calculate average order size for buyers by recency quintile
+avg_spend_rec_quin <- Tuango %>%
+  filter(buyer == 1) %>%
+  group_by(rec_quin) %>%
+  summarise(average_spending = mean(ordersize), .groups = 'drop')
+avg_spend_rec_quin
+
+# Create bar chart for average spending by recency quintile
+bar_avg_spend_rec <-
+ggplot(avg_spend_rec_quin, aes(x = rec_quin, y = average_spending)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Recency Quintile", y = "Average Spending (RMB)", title = "Average Spending by Recency Quintile") +
+  theme_minimal()
+bar_avg_spend_rec
+```
+
+
+Q7avg_spd_freq
+```{r}
+#Flip indices
+Tuango$freq_quin <- max(Tuango$freq_quin) + 1 - Tuango$freq_quin
+
+# Calculate average order size for buyers by frequency quintile
+avg_spend_freq_quin <- Tuango %>%
+  filter(buyer==1) %>%
+  group_by(freq_quin) %>%
+  summarise(average_spending = mean(ordersize), .groups = 'drop')
+avg_spend_freq_quin
+
+# Create bar chart for average spending by freq quintile
+bar_avg_spend_freq <-
+ggplot(avg_spend_freq_quin, aes(x = freq_quin, y = average_spending)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Frequency Quintile", y = "Average Spending (RMB)", title = "Average Spending by Frequency Quintile") +
+  theme_minimal()
+bar_avg_spend_freq
+```
+
+```{r}
+#Flip indices
+#Tuango$mon_quin <- max(Tuango$mon_quin) + 1 - Tuango$mon_quin
+
+# Calculate average order size for buyers by Monetary quintile
+avg_spend_mon_quin <- Tuango %>%
+  filter(buyer==1) %>%
+  group_by(mon_quin) %>%
+  summarise(average_spending = mean(ordersize), .groups = 'drop')
+avg_spend_mon_quin
+
+# Create bar chart for average spending by Mon quintile
+bar_avg_spend_mon <-
+ggplot(avg_spend_mon_quin, aes(x = mon_quin, y = average_spending)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Monetary Quintile", y = "Average Spending (RMB)", title = "Average Spending by Monetary Quintile") +
+  theme_minimal()
+bar_avg_spend_mon
+
+```
+
+Q8
+#The outcomes indicate a slightly positive correlation between response and the recency, frequency, and average sizes of orders. Nevertheless, when analyzing solely customers who made purchases following push messages, the distribution of average spending remains relatively consistent across recency, frequency, and monetary quintiles. In contrast, considering all customers reveals significantly more variance.
+Q9
+```{r}
+unit_cost <- 1.6
+
+spend <- Tuango %>%
+  filter(buyer==1) %>%
+  summarize(avg_spend=mean(ordersize))
+
+breakeven_response_rate = unit_cost/(0.5*spend)
+
+breakeven_response_rate
+
+```
+#The breakeven response rate is 1.581368%.
+
+Q11a
+```{r}
+response <- Tuango %>% 
+  summarize(response = sum(buyer)/n()) 
+
+number_of_buyers = 264841*response
+number_of_buyers
+profit = number_of_buyers*(0.5*spend)-1.6*264841
+profit
+```
+#Profit is 406725.4 RMB.
+Q11b
+```{r}
+market_expenditure = 1.6*264841
+ROM = (profit/market_expenditure)*100
+ROM
+```
+#Return on marketing expenditures is 95.98339%.
+
+Q12(use column'rfm1')
+```{r}
+Tuango <- Tuango %>%
+  group_by(rfm1) %>%
+  mutate(avg_resp_rate_rfm=mean(buyer)) %>% ungroup()
+
+Tuango %>%
+  select(rfm1,avg_resp_rate_rfm,buyer)
+
+
+```
+
+```{r}
+Tuango <- Tuango %>% 
+  mutate(mailto = avg_resp_rate_rfm > breakeven_response_rate)
+
+Tuango %>%
+  select(rfm1,avg_resp_rate_rfm,buyer,mailto)
+```
+
+
+```{r}
+library(knitr)
+Tuango %>%
+  group_by(mailto) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  mutate(Percentage = n/sum(n)*100) %>%
+  kable(digits = 2)
+```
+#因为如果用rfm1的话效果没有改变，因此开始用前面题计算过的
+Q12(use column calculated)
+```{r}
+Tuango <- Tuango %>%
+  mutate(rfmindex_iq = 100*rec_quin+ 10*freq_quin+ mon_quin)
+
+head(Tuango %>% select(rec_quin, freq_quin, mon_quin,rfmindex_iq))
+```
+
+
+```{r}
+#单独生成RFM cell对应的response rate
+avg_resp_rate_rfm  <- Tuango %>%
+  group_by(rfmindex_iq) %>%
+  summarise(resp_rate_rfm_iq = mean(buyer), .groups = "drop")
+
+head(avg_resp_rate_rfm)
+```
+
+```{r}
+Tuango <- Tuango %>%
+  group_by(rfmindex_iq) %>%
+  mutate(resp_rate_rfm_iq = mean(buyer)) %>% ungroup()
+
+```
+
+```{r}
+Tuango <- Tuango %>% 
+  mutate(mailto_iq = resp_rate_rfm_iq > 0.01581368)
+
+Tuango %>%
+  select(rfmindex_iq, mailto_iq, buyer)
+```
+
+```{r}
+library(knitr)
+Tuango %>%
+  group_by(mailto_iq) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  mutate(Percentage = n/sum(n)*100) %>%
+  kable(digits = 2)
+```
+
+
+```{r}
+mailto_number = 264841*0.5981
+
+marketing_expenditure = 1.6*mailto_number
+  
+mailto_number
+marketing_expenditure
+```
+
+```{r}
+Tuango %>%
+  filter(mailto_iq == TRUE) %>%
+  group_by(buyer) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  mutate(Percentage = n/sum(n)*100) %>%
+  kable(digits = 2)
+```
+```{r}
+expected_buyer = mailto_number*0.0485
+expected_buyer
+```
+
+```{r}
+profit = expected_buyer*0.5*spend$avg_spend - marketing_expenditure
+
+ROM = profit/marketing_expenditure
+ROM
+```
+#ROM = 206.6965%
+
+Q12
+```{r}
+Tuango <- Tuango %>% mutate(same_rfm = rfm1==rfm2) 
+CrossTable(Tuango$same_rfm)
+```
+#Approximately 87.2% of the dataset exhibits identical RFM (Recency, Frequency, Monetary) indices. #Utilizing a sequential RFM approach enhances the evenness of RFM group distribution; however, this method complicates the interpretability of the index, as the rankings for frequency and monetary values are contingent upon the recency rank. 
+#Conversely, the independent RFM model boasts straightforward interpretability, though it risks yielding unpopulated categories due to the potential for uneven distribution.
+
